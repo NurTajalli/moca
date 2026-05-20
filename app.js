@@ -74,6 +74,8 @@ const listKeyOf = (kind) =>
 // ---------- State ----------
 let months = [];
 let currentId = null; // open month, or null on home
+let draft = null; // working COPY of the open month — edits live here until Save
+let dirty = false; // draft has unsaved changes
 let editing = null; // { kind, id } while the item modal is open
 
 const $ = (id) => document.getElementById(id);
@@ -97,18 +99,56 @@ function renderHome() {
 }
 
 // ---------- Month detail ----------
+// All edits happen on `draft` (a copy). Nothing reaches storage until Save.
 function currentMonth() {
-  return months.find((m) => m.id === currentId);
+  return draft;
+}
+
+const clone = (obj) => JSON.parse(JSON.stringify(obj));
+
+function markDirty() {
+  dirty = true;
+  updateSaveBtn();
+}
+
+function updateSaveBtn() {
+  const btn = $("saveMonthBtn");
+  btn.textContent = dirty ? "Save" : "Saved";
+  btn.classList.toggle("primary", dirty);
+  btn.disabled = !dirty;
 }
 
 function openMonth(id) {
+  const stored = months.find((m) => m.id === id);
+  if (!stored) return;
   currentId = id;
+  draft = clone(stored); // edit the copy, not the stored record
+  draft.income ||= [];
+  draft.bills ||= [];
+  draft.spending ||= [];
+  dirty = false;
   renderMonth();
+  updateSaveBtn();
   $("monthView").hidden = false;
 }
 
+// Commit the draft to storage.
+async function saveMonth() {
+  if (!draft) return;
+  draft.updated = Date.now();
+  await putMonth(clone(draft));
+  const i = months.findIndex((m) => m.id === draft.id);
+  if (i >= 0) months[i] = clone(draft);
+  else months.push(clone(draft));
+  dirty = false;
+  updateSaveBtn();
+}
+
 function closeMonth() {
+  if (dirty && !confirm("You have unsaved changes. Discard them?")) return;
   currentId = null;
+  draft = null;
+  dirty = false;
   $("monthView").hidden = true;
   renderHome();
 }
@@ -167,9 +207,9 @@ function renderRows(kind, items, ul) {
       const chk = li.querySelector(".row-chk");
       chk.checked = !!it.done;
       chk.addEventListener("click", (e) => e.stopPropagation());
-      chk.addEventListener("change", async () => {
+      chk.addEventListener("change", () => {
         it.done = chk.checked;
-        await persist();
+        markDirty();
         renderMonth();
       });
       li.querySelector(".row-name").textContent = it.name || "Untitled";
@@ -198,14 +238,6 @@ function renderRows(kind, items, ul) {
     li.addEventListener("click", () => openItemModal(kind, it));
     ul.appendChild(li);
   }
-}
-
-// Save the open month back to IndexedDB.
-async function persist() {
-  const m = currentMonth();
-  if (!m) return;
-  m.updated = Date.now();
-  await putMonth(m);
 }
 
 // The Spending Log IS the CC HSBC card breakdown — keep the "CC HSBC"
@@ -280,18 +312,19 @@ async function saveItem() {
     syncCcHsbc(m); // Spending Log total flows into the CC HSBC bill
   }
 
-  await persist();
+  markDirty();
   renderMonth();
   closeItemModal();
 }
 
-async function deleteItem() {
+function deleteItem() {
   if (!editing || !editing.id) return closeItemModal();
+  if (!confirm("Delete this item?")) return;
   const m = currentMonth();
   const key = listKeyOf(editing.kind);
   m[key] = m[key].filter((x) => x.id !== editing.id);
   if (editing.kind === "spending") syncCcHsbc(m);
-  await persist();
+  markDirty();
   renderMonth();
   closeItemModal();
 }
@@ -344,12 +377,14 @@ async function deleteCurrentMonth() {
   if (!confirm(`Delete ${monthLabel(currentId)}? This removes all its items.`)) return;
   await deleteMonthRec(currentId);
   months = months.filter((m) => m.id !== currentId);
+  dirty = false; // deleting the month — skip the discard prompt
   closeMonth();
 }
 
 // ---------- Wire up controls ----------
 $("addMonthBtn").addEventListener("click", openMonthModal);
 $("backBtn").addEventListener("click", closeMonth);
+$("saveMonthBtn").addEventListener("click", saveMonth);
 $("deleteMonthBtn").addEventListener("click", deleteCurrentMonth);
 
 document.querySelectorAll(".add-link").forEach((btn) => {

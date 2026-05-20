@@ -71,6 +71,18 @@ button {
 button.primary { background: var(--accent); color: #fff; font-weight: 700; }
 header button.primary { background: rgba(255, 255, 255, 0.92); color: var(--accent); }
 .link-danger { color: var(--danger); font-weight: 600; padding: 6px 4px; }
+button:disabled { opacity: 0.4; }
+
+/* Full-width delete button at the bottom of the month sheet */
+.del-month {
+  align-self: stretch;
+  margin-top: 6px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  font-weight: 600;
+  padding: 13px;
+  border-radius: 12px;
+}
 
 /* ===== Month grid (home) ===== */
 .list {
