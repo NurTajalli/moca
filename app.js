@@ -80,6 +80,16 @@ let editing = null; // { kind, id } while the item modal is open
 
 const $ = (id) => document.getElementById(id);
 
+// Brief success popup at the bottom of the screen.
+let toastTimer;
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
 // ---------- Home: list of months ----------
 function renderHome() {
   const list = $("monthList");
@@ -142,6 +152,7 @@ async function saveMonth() {
   else months.push(clone(draft));
   dirty = false;
   updateSaveBtn();
+  toast("Saved ✓");
 }
 
 function closeMonth() {
@@ -327,6 +338,7 @@ function deleteItem() {
   markDirty();
   renderMonth();
   closeItemModal();
+  toast("Item removed ✓");
 }
 
 // ---------- New month ----------
@@ -379,6 +391,7 @@ async function deleteCurrentMonth() {
   months = months.filter((m) => m.id !== currentId);
   dirty = false; // deleting the month — skip the discard prompt
   closeMonth();
+  toast("Month deleted ✓");
 }
 
 // ---------- Wire up controls ----------
