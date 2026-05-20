@@ -85,25 +85,27 @@ function renderHome() {
   const sorted = [...months].sort((a, b) => b.id.localeCompare(a.id));
   $("empty").hidden = sorted.length > 0;
 
+  const thisMonth = curMonthISO();
   for (const m of sorted) {
     const income = sum(m.income);
     const bills = sum(m.bills);
-    const paid = sum(m.bills.filter((b) => b.done));
+    const paidAmt = sum(m.bills.filter((b) => b.done));
+    const paidCount = m.bills.filter((b) => b.done).length;
     const balance = income - bills;
 
     const li = document.createElement("li");
     li.className = "month-card";
+    if (m.id === thisMonth) li.classList.add("current"); // this month = pink
     li.innerHTML = `
-      <div class="mc-top"><h3></h3><span class="mc-balance"></span></div>
-      <div class="mc-meta"></div>
-      <div class="bar"><div class="bar-fill"></div></div>`;
-    li.querySelector("h3").textContent = monthLabel(m.id);
-    const bal = li.querySelector(".mc-balance");
-    bal.textContent = RM(balance);
-    bal.classList.toggle("neg", balance < 0);
-    li.querySelector(".mc-meta").textContent =
-      `Income ${RM(income)}  ·  To pay ${RM(bills)}`;
-    const pct = bills > 0 ? Math.min(100, (paid / bills) * 100) : 0;
+      <div class="mc-month"></div>
+      <div class="mc-balance"></div>
+      <div class="mc-label">balance after bills</div>
+      <div class="bar"><div class="bar-fill"></div></div>
+      <div class="mc-paid"></div>`;
+    li.querySelector(".mc-month").textContent = monthLabel(m.id);
+    li.querySelector(".mc-balance").textContent = RM(balance);
+    li.querySelector(".mc-paid").textContent = `${paidCount}/${m.bills.length} bills paid`;
+    const pct = bills > 0 ? Math.min(100, (paidAmt / bills) * 100) : 0;
     li.querySelector(".bar-fill").style.width = pct + "%";
     li.addEventListener("click", () => openMonth(m.id));
     list.appendChild(li);

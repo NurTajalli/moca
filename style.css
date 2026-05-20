@@ -72,24 +72,52 @@ button.primary { background: var(--accent); color: #fff; font-weight: 700; }
 header button.primary { background: rgba(255, 255, 255, 0.92); color: var(--accent); }
 .link-danger { color: var(--danger); font-weight: 600; padding: 6px 4px; }
 
-/* ===== Month list (home) ===== */
-.list { list-style: none; display: flex; flex-direction: column; gap: 11px; }
-
-.month-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 15px 16px;
-  cursor: pointer;
+/* ===== Month grid (home) ===== */
+.list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
-.mc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.mc-top h3 { font-size: 18px; font-weight: 700; }
-.mc-balance { font-size: 17px; font-weight: 700; color: var(--pos); white-space: nowrap; }
-.mc-balance.neg { color: var(--danger); }
-.mc-meta { font-size: 13px; color: var(--muted); margin: 5px 0 10px; }
 
-.bar { height: 7px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.25s; }
+/* Every month is a coloured card. Default = blue. */
+.month-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 18px;
+  padding: 16px 15px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(150deg, #60a5fa, #2563eb);
+  box-shadow: 0 5px 16px rgba(37, 99, 235, 0.30);
+}
+
+/* The current calendar month = pink. */
+.month-card.current {
+  background: linear-gradient(150deg, #fb9ec5, #ec4899);
+  box-shadow: 0 5px 16px rgba(236, 72, 153, 0.34);
+}
+
+.mc-month { font-size: 15px; font-weight: 700; }
+.mc-balance { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.mc-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+.mc-paid { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+.bar {
+  height: 7px;
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.bar-fill { height: 100%; background: #fff; border-radius: 99px; transition: width 0.25s; }
 
 .empty { text-align: center; color: var(--muted); margin-top: 64px; font-size: 15px; line-height: 1.5; }
 
