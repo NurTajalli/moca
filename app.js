@@ -187,7 +187,9 @@ function renderRows(kind, items, ul) {
         renderMonth();
       });
       li.querySelector(".row-name").textContent = it.name || "Untitled";
-      const sub = [it.payTo, it.notes].filter(Boolean).join("  ·  ");
+      const subParts = [it.payTo, it.notes].filter(Boolean);
+      if (isCcHsbc(it.name)) subParts.push("auto: sum of Spending Log");
+      const sub = subParts.join("  ·  ");
       const subEl = li.querySelector(".row-sub");
       if (sub) subEl.textContent = sub;
       else subEl.remove();
@@ -218,6 +220,21 @@ async function persist() {
   if (!m) return;
   m.updated = Date.now();
   await putMonth(m);
+}
+
+// The Spending Log IS the CC HSBC card breakdown — keep the "CC HSBC"
+// bill's amount equal to the running sum of every logged expense.
+// Runs whenever a spending entry is added, edited, or deleted.
+const isCcHsbc = (name) => (name || "").trim().toLowerCase() === "cc hsbc";
+
+function syncCcHsbc(m) {
+  const total = sum(m.spending);
+  let cc = m.bills.find((b) => isCcHsbc(b.name));
+  if (!cc) {
+    cc = { id: uid(), name: "CC HSBC", amount: 0, payTo: "HSBC", notes: "", done: false };
+    m.bills.push(cc);
+  }
+  cc.amount = total;
 }
 
 // ---------- Item modal (add / edit income, bill, or expense) ----------
@@ -272,7 +289,10 @@ async function saveItem() {
     it.notes = $("fNotes").value.trim();
     it.done = $("fDone").checked;
   }
-  if (kind === "spending") it.date = $("fDate").value || todayISO();
+  if (kind === "spending") {
+    it.date = $("fDate").value || todayISO();
+    syncCcHsbc(m); // Spending Log total flows into the CC HSBC bill
+  }
 
   await persist();
   renderMonth();
@@ -284,6 +304,7 @@ async function deleteItem() {
   const m = currentMonth();
   const key = listKeyOf(editing.kind);
   m[key] = m[key].filter((x) => x.id !== editing.id);
+  if (editing.kind === "spending") syncCcHsbc(m);
   await persist();
   renderMonth();
   closeItemModal();
