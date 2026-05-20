@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MoCa — Money Tracker</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#12644a" />
+
+  <!-- iOS home-screen app -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MoCa" />
+  <link rel="apple-touch-icon" href="./icon-180.png" />
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- ===== HOME: list of months ===== -->
+  <div id="homeView">
+    <header>
+      <div>
+        <h1>MoCa</h1>
+        <p class="tagline">Money tracking, month by month</p>
+      </div>
+      <button id="addMonthBtn" class="primary" type="button">+ Month</button>
+    </header>
+    <main>
+      <ul id="monthList" class="list"></ul>
+      <p id="empty" class="empty">No months yet. Tap <strong>+ Month</strong> to start tracking.</p>
+    </main>
+  </div>
+
+  <!-- ===== MONTH DETAIL ===== -->
+  <div id="monthView" class="sheet" hidden>
+    <div class="sheet-bar">
+      <button id="backBtn" type="button">‹ Months</button>
+      <strong id="monthTitle"></strong>
+      <button id="deleteMonthBtn" class="link-danger" type="button">Delete</button>
+    </div>
+    <div class="sheet-scroll">
+      <div id="summary" class="summary"></div>
+
+      <section class="block">
+        <div class="block-head">
+          <h2>Income</h2>
+          <button class="add-link" type="button" data-kind="income">+ Add</button>
+        </div>
+        <ul id="incomeList" class="rows"></ul>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h2>To Pay</h2>
+          <button class="add-link" type="button" data-kind="bill">+ Add</button>
+        </div>
+        <ul id="billList" class="rows"></ul>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h2>Spending Log</h2>
+          <button class="add-link" type="button" data-kind="spending">+ Add</button>
+        </div>
+        <ul id="spendList" class="rows"></ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== ITEM MODAL (income / bill / expense) ===== -->
+  <div id="itemModal" class="modal" hidden>
+    <div class="modal-box">
+      <h2 id="itemModalTitle">Add</h2>
+      <label class="fld"><span>Name</span>
+        <input id="fName" type="text" placeholder="e.g. TNB, Salary, Groceries" />
+      </label>
+      <label class="fld"><span>Amount (RM)</span>
+        <input id="fAmount" type="number" inputmode="decimal" step="0.01" placeholder="0.00" />
+      </label>
+      <label class="fld" id="fldPayTo"><span>Pay to</span>
+        <input id="fPayTo" type="text" placeholder="Account / app (e.g. HSBC, Apps myTNB)" />
+      </label>
+      <label class="fld" id="fldDate"><span>Date</span>
+        <input id="fDate" type="date" />
+      </label>
+      <label class="fld" id="fldNotes"><span>Notes</span>
+        <textarea id="fNotes" rows="2" placeholder="Optional"></textarea>
+      </label>
+      <label class="chk" id="fldDone">
+        <input id="fDone" type="checkbox" /><span>Paid / done</span>
+      </label>
+      <div class="modal-actions">
+        <button id="itemDelete" class="link-danger" type="button" hidden>Delete</button>
+        <span class="spacer"></span>
+        <button id="itemCancel" type="button">Cancel</button>
+        <button id="itemSave" class="primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NEW MONTH MODAL ===== -->
+  <div id="monthModal" class="modal" hidden>
+    <div class="modal-box">
+      <h2>New month</h2>
+      <label class="fld"><span>Month</span>
+        <input id="fMonth" type="month" />
+      </label>
+      <label class="chk" id="fldCopy">
+        <input id="fCopy" type="checkbox" checked /><span>Copy “To Pay” list from latest month</span>
+      </label>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button id="monthCancel" type="button">Cancel</button>
+        <button id="monthCreate" class="primary" type="button">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

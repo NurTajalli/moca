@@ -1,0 +1,393 @@
+// MoCa — a local-first monthly money tracker.
+// Everything is stored on the device in IndexedDB; nothing leaves the phone.
+//
+// Data model — one record per month:
+//   { id: "2026-05",                    // YYYY-MM, also the key
+//     income:   [{ id, name, amount }],
+//     bills:    [{ id, name, amount, payTo, notes, done }],   // "To Pay"
+//     spending: [{ id, name, amount, date }],                 // actual log
+//     updated:  <ms> }
+
+// ---------- Storage: IndexedDB ----------
+const DB_NAME = "moca";
+const STORE = "months";
+let dbPromise;
+
+function db() {
+  if (!dbPromise) {
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id" });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  return dbPromise;
+}
+
+function idb(mode, makeReq) {
+  return new Promise(async (resolve, reject) => {
+    const os = (await db()).transaction(STORE, mode).objectStore(STORE);
+    const req = makeReq(os);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+const getAllMonths = () => idb("readonly", (os) => os.getAll());
+const putMonth = (m) => idb("readwrite", (os) => os.put(m));
+const deleteMonthRec = (id) => idb("readwrite", (os) => os.delete(id));
+
+// ---------- Helpers ----------
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const sum = (arr) => arr.reduce((t, x) => t + (Number(x.amount) || 0), 0);
+
+const RM = (n) =>
+  "RM " +
+  (Number(n) || 0).toLocaleString("en-MY", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+function monthLabel(id) {
+  const [y, m] = id.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+function curMonthISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+function fmtDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+const listKeyOf = (kind) =>
+  kind === "income" ? "income" : kind === "bill" ? "bills" : "spending";
+
+// ---------- State ----------
+let months = [];
+let currentId = null; // open month, or null on home
+let editing = null; // { kind, id } while the item modal is open
+
+const $ = (id) => document.getElementById(id);
+
+// ---------- Home: list of months ----------
+function renderHome() {
+  const list = $("monthList");
+  list.innerHTML = "";
+  const sorted = [...months].sort((a, b) => b.id.localeCompare(a.id));
+  $("empty").hidden = sorted.length > 0;
+
+  for (const m of sorted) {
+    const income = sum(m.income);
+    const bills = sum(m.bills);
+    const paid = sum(m.bills.filter((b) => b.done));
+    const balance = income - bills;
+
+    const li = document.createElement("li");
+    li.className = "month-card";
+    li.innerHTML = `
+      <div class="mc-top"><h3></h3><span class="mc-balance"></span></div>
+      <div class="mc-meta"></div>
+      <div class="bar"><div class="bar-fill"></div></div>`;
+    li.querySelector("h3").textContent = monthLabel(m.id);
+    const bal = li.querySelector(".mc-balance");
+    bal.textContent = RM(balance);
+    bal.classList.toggle("neg", balance < 0);
+    li.querySelector(".mc-meta").textContent =
+      `Income ${RM(income)}  ·  To pay ${RM(bills)}`;
+    const pct = bills > 0 ? Math.min(100, (paid / bills) * 100) : 0;
+    li.querySelector(".bar-fill").style.width = pct + "%";
+    li.addEventListener("click", () => openMonth(m.id));
+    list.appendChild(li);
+  }
+}
+
+// ---------- Month detail ----------
+function currentMonth() {
+  return months.find((m) => m.id === currentId);
+}
+
+function openMonth(id) {
+  currentId = id;
+  renderMonth();
+  $("monthView").hidden = false;
+}
+
+function closeMonth() {
+  currentId = null;
+  $("monthView").hidden = true;
+  renderHome();
+}
+
+function renderMonth() {
+  const m = currentMonth();
+  if (!m) return closeMonth();
+
+  $("monthTitle").textContent = monthLabel(m.id);
+
+  const income = sum(m.income);
+  const bills = sum(m.bills);
+  const paid = sum(m.bills.filter((b) => b.done));
+  const unpaid = bills - paid;
+  const balance = income - bills;
+  const spent = sum(m.spending);
+
+  $("summary").innerHTML = `
+    <div class="sm"><span>Income</span><strong>${RM(income)}</strong></div>
+    <div class="sm"><span>To pay</span><strong>${RM(bills)}</strong></div>
+    <div class="sm"><span>Paid</span><strong>${RM(paid)}</strong></div>
+    <div class="sm"><span>Still unpaid</span><strong class="${unpaid > 0 ? "neg" : ""}">${RM(unpaid)}</strong></div>
+    <div class="sm wide"><span>Balance — income minus to-pay</span><strong class="${balance < 0 ? "neg" : ""}">${RM(balance)}</strong></div>
+    <div class="sm wide"><span>Logged spending this month</span><strong>${RM(spent)}</strong></div>`;
+
+  renderRows("income", m.income, $("incomeList"));
+  renderRows("bill", m.bills, $("billList"));
+  renderRows("spending", m.spending, $("spendList"));
+}
+
+function renderRows(kind, items, ul) {
+  ul.innerHTML = "";
+  if (!items.length) {
+    const li = document.createElement("li");
+    li.className = "row-empty";
+    li.textContent = "Nothing yet — tap + Add.";
+    ul.appendChild(li);
+    return;
+  }
+
+  // Spending shows newest first; income & bills keep entry order.
+  const ordered =
+    kind === "spending"
+      ? [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      : items;
+
+  for (const it of ordered) {
+    const li = document.createElement("li");
+    li.className = "row";
+
+    if (kind === "bill") {
+      li.innerHTML = `
+        <input type="checkbox" class="row-chk" />
+        <div class="row-main"><div class="row-name"></div><div class="row-sub"></div></div>
+        <div class="row-amt"></div>`;
+      const chk = li.querySelector(".row-chk");
+      chk.checked = !!it.done;
+      chk.addEventListener("click", (e) => e.stopPropagation());
+      chk.addEventListener("change", async () => {
+        it.done = chk.checked;
+        await persist();
+        renderMonth();
+      });
+      li.querySelector(".row-name").textContent = it.name || "Untitled";
+      const sub = [it.payTo, it.notes].filter(Boolean).join("  ·  ");
+      const subEl = li.querySelector(".row-sub");
+      if (sub) subEl.textContent = sub;
+      else subEl.remove();
+      if (it.done) li.classList.add("done");
+    } else if (kind === "spending") {
+      li.innerHTML = `
+        <div class="row-main"><div class="row-name"></div><div class="row-sub"></div></div>
+        <div class="row-amt"></div>`;
+      li.querySelector(".row-name").textContent = it.name || "Untitled";
+      li.querySelector(".row-sub").textContent = fmtDate(it.date);
+    } else {
+      li.innerHTML = `<div class="row-main"><div class="row-name"></div></div><div class="row-amt"></div>`;
+      li.querySelector(".row-name").textContent = it.name || "Untitled";
+    }
+
+    const amtEl = li.querySelector(".row-amt");
+    amtEl.textContent = RM(it.amount);
+    if (kind === "income") amtEl.classList.add("pos");
+
+    li.addEventListener("click", () => openItemModal(kind, it));
+    ul.appendChild(li);
+  }
+}
+
+// Save the open month back to IndexedDB.
+async function persist() {
+  const m = currentMonth();
+  if (!m) return;
+  m.updated = Date.now();
+  await putMonth(m);
+}
+
+// ---------- Item modal (add / edit income, bill, or expense) ----------
+function openItemModal(kind, item) {
+  editing = { kind, id: item ? item.id : null };
+  const noun = { income: "income", bill: "bill", spending: "expense" }[kind];
+  $("itemModalTitle").textContent = (item ? "Edit " : "Add ") + noun;
+
+  $("fName").value = item ? item.name || "" : "";
+  $("fAmount").value = item && item.amount != null ? item.amount : "";
+  $("fPayTo").value = item ? item.payTo || "" : "";
+  $("fNotes").value = item ? item.notes || "" : "";
+  $("fDate").value = item ? item.date || todayISO() : todayISO();
+  $("fDone").checked = item ? !!item.done : false;
+
+  $("fldPayTo").hidden = kind !== "bill";
+  $("fldNotes").hidden = kind !== "bill";
+  $("fldDone").hidden = kind !== "bill";
+  $("fldDate").hidden = kind !== "spending";
+  $("itemDelete").hidden = !item;
+
+  $("itemModal").hidden = false;
+  $("fName").focus();
+}
+
+function closeItemModal() {
+  $("itemModal").hidden = true;
+  editing = null;
+}
+
+async function saveItem() {
+  if (!editing) return;
+  const m = currentMonth();
+  if (!m) return closeItemModal();
+
+  const { kind, id } = editing;
+  const key = listKeyOf(kind);
+  const name = $("fName").value.trim();
+  const amount = parseFloat($("fAmount").value) || 0;
+
+  if (!name && !amount) return closeItemModal(); // nothing entered
+
+  let it = id ? m[key].find((x) => x.id === id) : null;
+  if (!it) {
+    it = { id: uid() };
+    m[key].push(it);
+  }
+  it.name = name;
+  it.amount = amount;
+  if (kind === "bill") {
+    it.payTo = $("fPayTo").value.trim();
+    it.notes = $("fNotes").value.trim();
+    it.done = $("fDone").checked;
+  }
+  if (kind === "spending") it.date = $("fDate").value || todayISO();
+
+  await persist();
+  renderMonth();
+  closeItemModal();
+}
+
+async function deleteItem() {
+  if (!editing || !editing.id) return closeItemModal();
+  const m = currentMonth();
+  const key = listKeyOf(editing.kind);
+  m[key] = m[key].filter((x) => x.id !== editing.id);
+  await persist();
+  renderMonth();
+  closeItemModal();
+}
+
+// ---------- New month ----------
+function openMonthModal() {
+  $("fMonth").value = curMonthISO();
+  $("fCopy").checked = months.length > 0;
+  $("fldCopy").hidden = months.length === 0;
+  $("monthModal").hidden = false;
+}
+
+async function createMonth() {
+  const id = $("fMonth").value;
+  if (!id) return;
+
+  // Month already exists — just open it.
+  if (months.some((m) => m.id === id)) {
+    $("monthModal").hidden = true;
+    openMonth(id);
+    return;
+  }
+
+  const m = { id, income: [], bills: [], spending: [], updated: Date.now() };
+
+  // Optionally carry over the recurring "To Pay" list from the latest month.
+  if ($("fCopy").checked) {
+    const latest = [...months].sort((a, b) => b.id.localeCompare(a.id))[0];
+    if (latest) {
+      m.bills = latest.bills.map((b) => ({
+        id: uid(),
+        name: b.name,
+        amount: b.amount,
+        payTo: b.payTo || "",
+        notes: b.notes || "",
+        done: false,
+      }));
+    }
+  }
+
+  months.push(m);
+  await putMonth(m);
+  $("monthModal").hidden = true;
+  renderHome();
+  openMonth(id);
+}
+
+async function deleteCurrentMonth() {
+  if (!currentId) return;
+  if (!confirm(`Delete ${monthLabel(currentId)}? This removes all its items.`)) return;
+  await deleteMonthRec(currentId);
+  months = months.filter((m) => m.id !== currentId);
+  closeMonth();
+}
+
+// ---------- Wire up controls ----------
+$("addMonthBtn").addEventListener("click", openMonthModal);
+$("backBtn").addEventListener("click", closeMonth);
+$("deleteMonthBtn").addEventListener("click", deleteCurrentMonth);
+
+document.querySelectorAll(".add-link").forEach((btn) => {
+  btn.addEventListener("click", () => openItemModal(btn.dataset.kind, null));
+});
+
+$("itemSave").addEventListener("click", saveItem);
+$("itemCancel").addEventListener("click", closeItemModal);
+$("itemDelete").addEventListener("click", deleteItem);
+
+$("monthCreate").addEventListener("click", createMonth);
+$("monthCancel").addEventListener("click", () => ($("monthModal").hidden = true));
+
+// Tap the dimmed backdrop to dismiss a modal.
+$("itemModal").addEventListener("click", (e) => {
+  if (e.target === $("itemModal")) closeItemModal();
+});
+$("monthModal").addEventListener("click", (e) => {
+  if (e.target === $("monthModal")) $("monthModal").hidden = true;
+});
+
+// ---------- Keep the data resident (resist iOS storage eviction) ----------
+async function requestPersistentStorage() {
+  if (!navigator.storage || !navigator.storage.persist) return;
+  try {
+    if (!(await navigator.storage.persisted())) await navigator.storage.persist();
+  } catch {}
+}
+
+// ---------- Boot ----------
+(async function init() {
+  await requestPersistentStorage();
+  months = await getAllMonths();
+  // Guard against older/partial records missing a list.
+  for (const m of months) {
+    m.income ||= [];
+    m.bills ||= [];
+    m.spending ||= [];
+  }
+  renderHome();
+})();
+
+// ---------- Service worker (offline support) ----------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
