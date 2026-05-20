@@ -43,7 +43,7 @@ header {
   justify-content: space-between;
   gap: 12px;
   padding: calc(env(safe-area-inset-top) + 44px) 18px 18px;
-  background: linear-gradient(135deg, #12644a, #1a7f4f 70%, #2ec48a);
+  background: linear-gradient(120deg, #3b82f6, #ec4899);
   border-bottom: 1px solid var(--border);
 }
 
