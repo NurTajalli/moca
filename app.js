@@ -372,10 +372,31 @@ async function requestPersistentStorage() {
   } catch {}
 }
 
+// One-time seed: on the very first launch, load the months parsed from
+// Financial.xlsx (seed.js). After that the flag stops it ever running again,
+// so deleting a month won't bring it back.
+async function seedIfFirstRun() {
+  if (months.length > 0) return;
+  if (localStorage.getItem("moca.seeded")) return;
+  if (!Array.isArray(window.MOCA_SEED)) return;
+  for (const m of window.MOCA_SEED) {
+    await putMonth({
+      id: m.id,
+      income: m.income || [],
+      bills: m.bills || [],
+      spending: m.spending || [],
+      updated: m.updated || Date.now(),
+    });
+  }
+  localStorage.setItem("moca.seeded", "1");
+  months = await getAllMonths();
+}
+
 // ---------- Boot ----------
 (async function init() {
   await requestPersistentStorage();
   months = await getAllMonths();
+  await seedIfFirstRun();
   // Guard against older/partial records missing a list.
   for (const m of months) {
     m.income ||= [];
