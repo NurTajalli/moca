@@ -87,26 +87,10 @@ function renderHome() {
 
   const thisMonth = curMonthISO();
   for (const m of sorted) {
-    const income = sum(m.income);
-    const bills = sum(m.bills);
-    const paidAmt = sum(m.bills.filter((b) => b.done));
-    const paidCount = m.bills.filter((b) => b.done).length;
-    const balance = income - bills;
-
     const li = document.createElement("li");
     li.className = "month-card";
     if (m.id === thisMonth) li.classList.add("current"); // this month = pink
-    li.innerHTML = `
-      <div class="mc-month"></div>
-      <div class="mc-balance"></div>
-      <div class="mc-label">balance after bills</div>
-      <div class="bar"><div class="bar-fill"></div></div>
-      <div class="mc-paid"></div>`;
-    li.querySelector(".mc-month").textContent = monthLabel(m.id);
-    li.querySelector(".mc-balance").textContent = RM(balance);
-    li.querySelector(".mc-paid").textContent = `${paidCount}/${m.bills.length} bills paid`;
-    const pct = bills > 0 ? Math.min(100, (paidAmt / bills) * 100) : 0;
-    li.querySelector(".bar-fill").style.width = pct + "%";
+    li.textContent = monthLabel(m.id); // just the month + year
     li.addEventListener("click", () => openMonth(m.id));
     list.appendChild(li);
   }

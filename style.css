@@ -80,15 +80,19 @@ header button.primary { background: rgba(255, 255, 255, 0.92); color: var(--acce
   gap: 12px;
 }
 
-/* Every month is a coloured card. Default = blue. */
+/* Every month is a coloured card showing just the month + year. Default = blue. */
 .month-card {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 88px;
   border-radius: 18px;
-  padding: 16px 15px;
+  padding: 18px 14px;
   cursor: pointer;
   color: #fff;
+  font-size: 17px;
+  font-weight: 700;
   background: linear-gradient(150deg, #60a5fa, #2563eb);
   box-shadow: 0 5px 16px rgba(37, 99, 235, 0.30);
 }
@@ -98,26 +102,6 @@ header button.primary { background: rgba(255, 255, 255, 0.92); color: var(--acce
   background: linear-gradient(150deg, #fb9ec5, #ec4899);
   box-shadow: 0 5px 16px rgba(236, 72, 153, 0.34);
 }
-
-.mc-month { font-size: 15px; font-weight: 700; }
-.mc-balance { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-.mc-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
-}
-.mc-paid { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-
-.bar {
-  height: 7px;
-  margin-top: 6px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 99px;
-  overflow: hidden;
-}
-.bar-fill { height: 100%; background: #fff; border-radius: 99px; transition: width 0.25s; }
 
 .empty { text-align: center; color: var(--muted); margin-top: 64px; font-size: 15px; line-height: 1.5; }
 
