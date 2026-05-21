@@ -184,6 +184,15 @@ button:disabled { opacity: 0.4; }
 .row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-amt { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .row-amt.pos { color: var(--pos); }
+.row-amt.neg { color: var(--danger); }
+
+/* Read-only Balance row at the foot of the Income list. */
+.balance-row {
+  cursor: default;
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.balance-row .row-name { font-weight: 700; }
 .row-chk { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--accent); }
 .row.done .row-name { text-decoration: line-through; color: var(--muted); }
 .row.done .row-amt { color: var(--muted); }

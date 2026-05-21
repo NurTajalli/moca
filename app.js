@@ -200,8 +200,23 @@ function renderMonth() {
     <div class="sm wide"><span>Logged spending this month</span><strong>${RM(spent)}</strong></div>`;
 
   renderRows("income", m.income, $("incomeList"));
+  appendBalanceRow($("incomeList"), balance);
   renderRows("bill", m.bills, $("billList"));
   renderRows("spending", m.spending, $("spendList"));
+}
+
+// A read-only row at the foot of the Income list: Income minus all To Pay.
+function appendBalanceRow(ul, balance) {
+  const li = document.createElement("li");
+  li.className = "row balance-row";
+  li.innerHTML = `
+    <div class="row-main"><div class="row-name">Balance</div>
+      <div class="row-sub">Income minus all To Pay</div></div>
+    <div class="row-amt"></div>`;
+  const amt = li.querySelector(".row-amt");
+  amt.textContent = RM(balance);
+  amt.classList.add(balance < 0 ? "neg" : "pos");
+  ul.appendChild(li);
 }
 
 function renderRows(kind, items, ul) {
@@ -239,7 +254,7 @@ function renderRows(kind, items, ul) {
       });
       li.querySelector(".row-name").textContent = it.name || "Untitled";
       const subParts = [it.payTo, it.notes].filter(Boolean);
-      if (isCcHsbc(it.name)) subParts.push("auto: sum of Spending Log");
+      if (isCcHsbc(it.name)) subParts.push("auto: sum of HSBC Spending Log");
       const sub = subParts.join("  ·  ");
       const subEl = li.querySelector(".row-sub");
       if (sub) subEl.textContent = sub;
