@@ -172,25 +172,25 @@ button:disabled { opacity: 0.4; }
 /* Card grid — used for To Pay and the HSBC Spending Log. */
 .rows.cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
 }
 .rows.cards .row-empty { grid-column: 1 / -1; }
 
 .row.card {
   flex-direction: column;
   align-items: stretch;
-  gap: 5px;
-  padding: 12px;
+  gap: 3px;
+  padding: 9px;
   position: relative;
 }
-.row.card .row-name { white-space: normal; }
-.row.card .row-sub { white-space: normal; }
-.row.card .row-amt { margin-top: auto; font-size: 16px; }
+.row.card .row-name { white-space: normal; font-size: 13px; }
+.row.card .row-sub { white-space: normal; font-size: 11px; }
+.row.card .row-amt { margin-top: auto; font-size: 14px; }
 
 /* Bill cards: the "paid" checkbox sits in the top-right corner. */
-.row.card.bill .row-chk { position: absolute; top: 10px; right: 10px; }
-.row.card.bill .row-main { padding-right: 30px; }
+.row.card.bill .row-chk { position: absolute; top: 7px; right: 7px; width: 18px; height: 18px; }
+.row.card.bill .row-main { padding-right: 22px; }
 
 .row {
   display: flex;
