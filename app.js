@@ -80,14 +80,16 @@ let editing = null; // { kind, id } while the item modal is open
 
 const $ = (id) => document.getElementById(id);
 
-// Brief success popup at the bottom of the screen.
+// Popup at the bottom of the screen.
+// persist = true keeps it up (e.g. "Saving…") until the next toast replaces it.
 let toastTimer;
-function toast(msg) {
+function toast(msg, persist) {
   const el = $("toast");
   el.textContent = msg;
   el.classList.add("show");
+  el.classList.toggle("busy", !!persist);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+  if (!persist) toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
 // ---------- Home: list of months ----------
@@ -145,6 +147,14 @@ function openMonth(id) {
 // Commit the draft to storage.
 async function saveMonth() {
   if (!draft) return;
+
+  // Show a "Saving…" popup so the user sees the save start.
+  toast("Saving…", true);
+  const btn = $("saveMonthBtn");
+  btn.textContent = "Saving…";
+  btn.disabled = true;
+  const started = Date.now();
+
   draft.updated = Date.now();
   await putMonth(clone(draft));
   const i = months.findIndex((m) => m.id === draft.id);
@@ -152,7 +162,11 @@ async function saveMonth() {
   else months.push(clone(draft));
   dirty = false;
   updateSaveBtn();
-  toast("Saved ✓");
+
+  // Keep "Saving…" visible long enough to be noticed, even though
+  // writing to local storage is near-instant.
+  const wait = Math.max(0, 500 - (Date.now() - started));
+  setTimeout(() => toast("Saved ✓"), wait);
 }
 
 function closeMonth() {

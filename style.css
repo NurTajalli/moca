@@ -253,3 +253,5 @@ button:disabled { opacity: 0.4; }
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* "Saving…" in-progress state — blue instead of success green. */
+.toast.busy { background: #3b82f6; }
