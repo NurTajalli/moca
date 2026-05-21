@@ -1,6 +1,6 @@
 // Network-first service worker: serves fresh code when online,
 // falls back to the cache when offline so the app still opens.
-const CACHE = "moca-v9";
+const CACHE = "moca-v10";
 const ASSETS = [
   "./",
   "./index.html",

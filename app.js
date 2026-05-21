@@ -221,6 +221,10 @@ function appendBalanceRow(ul, balance) {
 
 function renderRows(kind, items, ul) {
   ul.innerHTML = "";
+  // To Pay and the HSBC Spending Log show as a 2-up grid of small cards.
+  const cardMode = kind === "bill" || kind === "spending";
+  ul.className = "rows" + (cardMode ? " cards" : "");
+
   if (!items.length) {
     const li = document.createElement("li");
     li.className = "row-empty";
@@ -237,7 +241,7 @@ function renderRows(kind, items, ul) {
 
   for (const it of ordered) {
     const li = document.createElement("li");
-    li.className = "row";
+    li.className = "row" + (cardMode ? " card " + kind : "");
 
     if (kind === "bill") {
       li.innerHTML = `
